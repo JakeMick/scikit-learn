@@ -43,7 +43,7 @@ Unlabeled Data. ACM 2008
 http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.140.9201
 """
 
-# Authors: Jacob Mick <jam7w2@mail.missouri.edu>
+# Authors: Alexandre Drouin <alexandre.drouin.8@ulaval.ca>, Jacob Mick <jam7w2@mail.missouri.edu>
 # Licence: BSD
 
 from ..base import BaseEstimator, ClassifierMixin
