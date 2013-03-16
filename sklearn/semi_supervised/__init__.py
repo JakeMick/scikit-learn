@@ -6,5 +6,6 @@ Propagation.
 """
 
 from .label_propagation import LabelPropagation, LabelSpreading
+from .pu_learning import POSOnly
 
-__all__ = ['LabelPropagation', 'LabelSpreading']
+__all__ = ['LabelPropagation', 'LabelSpreading', 'POSOnly']
