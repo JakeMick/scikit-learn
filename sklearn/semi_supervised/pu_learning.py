@@ -5,10 +5,10 @@ classification problem where some positive labels are known and the negative
 labels contain a mixture of positive and negative labels. The setting commonly
 arises when domain experts record only the data that is of interest to them.
 
-In order for PU learning to be successful the real positive labels in the
-unlabeled class must be drawn independently of the training features. The
-problem then reduces to calibration of probability estimates. POSOnly finds
-this calibration by scaling the ratio of observed positives/unlabeled to the
+In order for PU learning to be successful the flipping of positive labels to
+the unlabeled class must be independent of the training features. The problem
+then reduces to calibration of probability estimates. POSOnly finds this
+calibration by scaling the ratio of observed positives/unlabeled to the
 ratio of predicted postives/negatives on held-out data.
 
 For more information see the references below.
@@ -50,6 +50,8 @@ from ..base import BaseEstimator, ClassifierMixin
 import numpy as np
 
 
+#TODO
+# ...do we need ClassifierMixin?
 class POSOnly(BaseEstimator, ClassifierMixin):
     """ POSOnly Classifier
 
@@ -86,11 +88,14 @@ class POSOnly(BaseEstimator, ClassifierMixin):
 
     """
 
+    # TODO
+    # Should be be "super"ing the base classifier?
+
     def __init__(self, estimator, held_out_ratio=0.1, precomputed_kernel=False,
                  random_state=None):
         self.estimator = estimator
         #TODO
-        # self.c necessary? here?
+        # self.c necessary? here? move it to fit?
         self.c = 1.0
         self.held_out_ratio = held_out_ratio
         if random_state is not None:
