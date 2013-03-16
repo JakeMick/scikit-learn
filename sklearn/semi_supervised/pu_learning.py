@@ -91,6 +91,12 @@ class POSOnly(BaseEstimator, ClassifierMixin):
     # TODO
     # Should be be "super"ing the base classifier?
 
+    # TODO
+    # implement get_params, set_params
+
+    # TODO
+    # use util funcs to check assumptions
+    # e.g. 2darray, sparse arrays...
     def __init__(self, estimator, held_out_ratio=0.1, precomputed_kernel=False,
                  random_state=None):
         self.estimator = estimator
