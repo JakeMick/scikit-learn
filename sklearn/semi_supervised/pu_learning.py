@@ -47,29 +47,31 @@ http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.140.9201
 #          Jacob Mick <jam7w2@mail.missouri.edu>
 # Licence: BSD
 
-from ..base import BaseEstimator, ClassifierMixin
+from ..base import BaseEstimator, ClassifierMixin, MetaEstimatorMixin
 import numpy as np
 
 
-#TODO
-# ...do we need ClassifierMixin?
-class POSOnly(BaseEstimator, ClassifierMixin):
+class POSOnly(BaseEstimator, ClassifierMixin, MetaEstimatorMixin):
     """ POSOnly Classifier
 
     Parameters
     ----------
-    estimator
+    estimator : estimator object
         A classifier that implements fit and predict_proba.
 
-    held_out_ratio
-        Fraction of samples to use when computing the platt scaling intercept.
+    held_out_ratio : float, default:0.1
+        Fraction of samples to use when computing the probability that a positive
+        example is labeled.
         1 - held_out_ratio is the number of observations to use when fitting
         the underlying classifier.
 
-    precomputed_kernel
-        descr
+    estimator_input_type : str, default:'feature_vector'
+        Specifies the type of the data used when fitting and predicting with
+        the underlying classifier. It must be 'kernel_matrix' or 'feature_vector'.
+        The kernel_matrix type must be used for underlying estimators with a
+        kernel='precomputed' parameter.
 
-    random_state
+    random_state : int or RandomState
         Random seed used for shuffling the data before splitting it.
 
     Adapts any probabilistic binary classifier to Positive Unlabled Learning
@@ -77,9 +79,9 @@ class POSOnly(BaseEstimator, ClassifierMixin):
 
     Notes
     -----
-    The class with the larger numerical value is assumed to be the postive
+    The class with the larger numerical value is assumed to be the positive
     class. The class with the smaller numerical value is assumed to be the
-    negative class.
+    unlabeled class.
 
     References
     ----------
@@ -88,22 +90,12 @@ class POSOnly(BaseEstimator, ClassifierMixin):
     http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.140.9201
 
     """
-
-    # TODO
-    # Should be be "super"ing the base classifier?
-
-    # TODO
-    # implement get_params, set_params
-
     # TODO
     # use util funcs to check assumptions
     # e.g. 2darray, sparse arrays...
-    def __init__(self, estimator, held_out_ratio=0.1, precomputed_kernel=False,
+    def __init__(self, estimator, held_out_ratio=0.1, estimator_input_type='feature_vector',
                  random_state=None):
         self.estimator = estimator
-        #TODO
-        # self.c necessary? here? move it to fit?
-        self.c = 1.0
         self.held_out_ratio = held_out_ratio
         if random_state is not None:
             self.random_state = random_state
@@ -115,21 +107,66 @@ class POSOnly(BaseEstimator, ClassifierMixin):
                             "implement methods fit and predict_proba."
                             "'%s'" % (estimator,))
 
-        if precomputed_kernel:
-            self.fit = self._fit_precomputed_kernel
+        if estimator_input_type == 'kernel_matrix':
+            self.fit = self._fit_kernel_matrix
         else:
-            self.fit = self._fit_no_precomputed_kernel
+            self.fit = self._fit_feature_vectors
 
         self.estimator_fitted = False
 
-    def _fit_precomputed_kernel(self, X, y):
-        positives = np.where(y == 1)[0]
-        held_out_size = np.ceil(positives.shape[0] * self.held_out_ratio)
+    def fit(self, X, y):
+        """Fit the model according to the given training data.
 
-        # TODO
-        # What kind of error should this raise?
-        if positives.shape[0] <= held_out_size:
-            raise('Not enough positive examples. Try decreaing held_out_size.')
+        Parameters
+        ----------
+        X : {array-like, sparse matrix}, shape = [n_samples, n_features]
+            Training vector, where n_samples in the number of samples and
+            n_features is the number of features.
+
+        y : array-like, shape = [n_samples]
+            Target vector relative to X. The class with the largest numerical
+            value is assumed to be the positive class. The class with the smallest
+            numerical value is assumed to be the unlabeled class.
+
+        Returns
+        -------
+        self : object
+            Returns self.
+        """
+        return NotImplemented
+
+    #TODO
+    #This method was never properly tested. I implemented it quickly and ended
+    #up never using it. Although, for kernel method users, this is a necessary
+    #feature. We could write a test that computes a kernel matrix with the RBF
+    #kernel and checks that the column/row holding out works properly.
+    def _fit_kernel_matrix(self, X, y):
+        """Fit the model according to the given training data.
+
+        Parameters
+        ----------
+        X : array-like, shape = [n_samples, n_samples]
+            Precomputed kernel matrix
+
+        y : array-like, shape = [n_samples]
+            Target vector relative to X. The class with the largest numerical
+            value is assumed to be the positive class. The class with the smallest
+            numerical value is assumed to be the unlabeled class.
+
+        Returns
+        -------
+        self : object
+            Returns self.
+        """
+        # XXX
+        # Assuming that the class with the larger value is the positive class.
+        self.classes_, y = np.unique(y, return_inverse=True)
+
+        if self.classes_.shape[0] != 2:
+            raise ValueError('The target vector must contain exactly two classes.')
+
+        positives = np.where(y == self.classes_[1])[0]
+        held_out_size = np.ceil(positives.shape[0] * self.held_out_ratio)
 
         if self.random_state is not None:
             np.random.seed(seed=self.random_state)
@@ -149,46 +186,46 @@ class POSOnly(BaseEstimator, ClassifierMixin):
         X = X[:, keep]
         X = X[keep]
 
-        y = np.delete(y, held_out)
+        y = y[keep]
 
         self.estimator.fit(X, y)
 
         held_out_predictions = self.estimator.predict_proba(X_test_held_out)
 
-        #TODO
-        # I understand why this is here.
-        # Some probabilistic classifiers in sklearn have that awkward 2d
-        # [p, 1-p] prediction. There's got to be a better way to handle this
-        # than a try-except pass.
-        try:
+        if np.rank(held_out_predictions) > 1:
             held_out_predictions = held_out_predictions[:, 1]
-        except:
-            pass
 
-        c = np.mean(held_out_predictions)
-        self.c = c
-
+        self.c = np.mean(held_out_predictions)
         self.estimator_fitted = True
 
-    def _fit_no_precomputed_kernel(self, X, y):
-        """
-        Fits an estimator of p(s=1|x) and estimates the value of p(s=1|y=1,x)
+    def _fit_feature_vectors(self, X, y):
+        """Fit the model according to the given training data.
 
-        X -- List of feature vectors
-        y -- Labels associated to each feature vector in X (Positive label: 1.0, Negative label: -1.0)
+        Parameters
+        ----------
+        X : array-like, shape = [n_samples, n_samples]
+            Training vectors, where n_samples is the number of samples
+            and n_features is the number of features.
+
+        y : array-like, shape = [n_samples]
+            Target vector relative to X. The class with the largest numerical
+            value is assumed to be the positive class. The class with the smallest
+            numerical value is assumed to be the unlabeled class.
+
+        Returns
+        -------
+        self : object
+            Returns self.
         """
         # XXX
-
         # Assuming that the class with the larger value is the positive class.
-        # Should we ask for this explicitly in the docs?
         self.classes_, y = np.unique(y, return_inverse=True)
-        positives = np.where(y == 1.)[0]
-        held_out_size = np.ceil(positives.shape[0] * self.held_out_ratio)
 
-        #TODO
-        # what kind of error should this raise
-        if positives.shape[0] <= held_out_size:
-            raise("Not enough positive examples to estimate.")
+        if self.classes_.shape[0] != 2:
+            raise ValueError('The target vector must contain exactly two classes.')
+
+        positives = np.where(y == self.classes_[1])[0]
+        held_out_size = np.ceil(positives.shape[0] * self.held_out_ratio)
 
         if self.random_state is not None:
             np.random.seed(seed=self.random_state)
@@ -203,55 +240,56 @@ class POSOnly(BaseEstimator, ClassifierMixin):
 
         held_out_predictions = self.estimator.predict_proba(X_held_out)
 
-        #TODO
-        # I understand why this is here.
-        # Some probabilistic classifiers in sklearn have that awkward 2d
-        # [p, 1-p] prediction. There's got to be a better way to handle this
-        # than a try-except pass.
-        try:
+        if np.rank(held_out_predictions) > 1:
             held_out_predictions = held_out_predictions[:, 1]
-        except:
-            pass
 
-        c = np.mean(held_out_predictions)
-        self.c = c
-
+        self.c = np.mean(held_out_predictions)
         self.estimator_fitted = True
 
     def predict_proba(self, X):
-        """
-        Predicts p(y=1|x) using the estimator and the value of p(s=1|y=1) estimated in fit(...)
+        """Compute probability of having the positive class for samples in X.
 
-        X -- List of feature vectors or a precomputed kernel matrix
+        Parameters
+        ----------
+        X : array-like, shape = [n_samples, n_features]
+            Feature vectors, where n_samples is the number of samples
+            and n_features is the number of features.
+
+        Returns
+        -------
+        y : array-like, shape = [n_samples]
+            Returns the probability of the sample for the positive class.
         """
         if not self.estimator_fitted:
-            raise Exception('The estimator must be fitted before calling predict_proba(...).')
+            raise ValueError('The estimator must be fitted before calling predict_proba.')
 
         probabilistic_predictions = self.estimator.predict_proba(X)
 
-        #TODO
-        # I understand why this is here.
-        # Some probabilistic classifiers in sklearn have that awkward 2d
-        # [p, 1-p] prediction. There's got to be a better way to handle this
-        # than a try-except pass.
-
-        try:
+        if np.rank(probabilistic_predictions) > 1:
             probabilistic_predictions = probabilistic_predictions[:, 1]
-        except:
-            pass
 
         return probabilistic_predictions / self.c
 
-    def predict(self, X, treshold=0.5):
-        """
-        Assign labels to feature vectors based on the estimator's predictions
+    def predict(self, X, threshold=0.5):
+        """Perform classification on samples in X.
 
-        X -- List of feature vectors or a precomputed kernel matrix
-        treshold -- The decision treshold between the positive and the negative class
+        Parameters
+        ----------
+        X : {array-like, sparse matrix}, shape = [n_samples, n_features]
+            Feature vectors, where n_samples is the number of samples
+            and n_features is the number of features.
+        threshold : float [0,1], default:0.5
+            The threshold used to determine the class of an example based
+            on its probability of having the positive class. All examples
+            with probabilities above the threshold will be classified as
+            having the positive class.
+
+        Returns
+        -------
+        y : array, shape = [n_samples]
+            Class labels for samples in X.
         """
         if not self.estimator_fitted:
-            raise Exception("The estimator must be fitted before calling predict(...).")
+            raise ValueError("The estimator must be fitted before calling predict.")
 
-        #TODO
-        # Need to map the prediction to the origin self.classes_
-        return (self.predict_proba(X) > self.threshold).astype('int')
+        return np.array([self.classes_[x] for x in (self.predict_proba(X) > threshold).astype('int')])
