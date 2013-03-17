@@ -65,12 +65,6 @@ class POSOnly(BaseEstimator, ClassifierMixin, MetaEstimatorMixin):
         1 - held_out_ratio is the number of observations to use when fitting
         the underlying classifier.
 
-    estimator_input_type : str, default:'feature_vector'
-        Specifies the type of the data used when fitting and predicting with
-        the underlying classifier. It must be 'kernel_matrix' or 'feature_vector'.
-        The kernel_matrix type must be used for underlying estimators with a
-        kernel='precomputed' parameter.
-
     random_state : int or RandomState
         Random seed used for shuffling the data before splitting it.
 
@@ -93,8 +87,7 @@ class POSOnly(BaseEstimator, ClassifierMixin, MetaEstimatorMixin):
     # TODO
     # use util funcs to check assumptions
     # e.g. 2darray, sparse arrays...
-    def __init__(self, estimator, held_out_ratio=0.1, estimator_input_type='feature_vector',
-                 random_state=None):
+    def __init__(self, estimator, held_out_ratio=0.1, random_state=None):
         self.estimator = estimator
         self.held_out_ratio = held_out_ratio
         if random_state is not None:
@@ -107,11 +100,6 @@ class POSOnly(BaseEstimator, ClassifierMixin, MetaEstimatorMixin):
                             "implement methods fit and predict_proba."
                             "'%s'" % (estimator,))
 
-        if estimator_input_type == 'kernel_matrix':
-            self.fit = self._fit_kernel_matrix
-        else:
-            self.fit = self._fit_feature_vectors
-
         self.estimator_fitted = False
 
     def fit(self, X, y):
@@ -122,90 +110,6 @@ class POSOnly(BaseEstimator, ClassifierMixin, MetaEstimatorMixin):
         X : {array-like, sparse matrix}, shape = [n_samples, n_features]
             Training vector, where n_samples in the number of samples and
             n_features is the number of features.
-
-        y : array-like, shape = [n_samples]
-            Target vector relative to X. The class with the largest numerical
-            value is assumed to be the positive class. The class with the smallest
-            numerical value is assumed to be the unlabeled class.
-
-        Returns
-        -------
-        self : object
-            Returns self.
-        """
-        return NotImplemented
-
-    #TODO
-    #This method was never properly tested. I implemented it quickly and ended
-    #up never using it. Although, for kernel method users, this is a necessary
-    #feature. We could write a test that computes a kernel matrix with the RBF
-    #kernel and checks that the column/row holding out works properly.
-    def _fit_kernel_matrix(self, X, y):
-        """Fit the model according to the given training data.
-
-        Parameters
-        ----------
-        X : array-like, shape = [n_samples, n_samples]
-            Precomputed kernel matrix
-
-        y : array-like, shape = [n_samples]
-            Target vector relative to X. The class with the largest numerical
-            value is assumed to be the positive class. The class with the smallest
-            numerical value is assumed to be the unlabeled class.
-
-        Returns
-        -------
-        self : object
-            Returns self.
-        """
-        # XXX
-        # Assuming that the class with the larger value is the positive class.
-        self.classes_, y = np.unique(y, return_inverse=True)
-
-        if self.classes_.shape[0] != 2:
-            raise ValueError('The target vector must contain exactly two classes.')
-
-        positives = np.where(y == self.classes_[1])[0]
-        held_out_size = np.ceil(positives.shape[0] * self.held_out_ratio)
-
-        if self.random_state is not None:
-            np.random.seed(seed=self.random_state)
-        np.random.shuffle(positives)
-
-        held_out = positives[:held_out_size]
-
-        #Hold out test kernel matrix
-        X_test_held_out = X[held_out]
-
-        # XXX
-        # Can we allocated np.arange(y.shape[0]) at a higher level?
-        keep = np.setdiff1d(np.arange(y.shape[0]), held_out)
-        X_test_held_out = X_test_held_out[:, keep]
-
-        #New training kernel matrix
-        X = X[:, keep]
-        X = X[keep]
-
-        y = y[keep]
-
-        self.estimator.fit(X, y)
-
-        held_out_predictions = self.estimator.predict_proba(X_test_held_out)
-
-        if np.rank(held_out_predictions) > 1:
-            held_out_predictions = held_out_predictions[:, 1]
-
-        self.c = np.mean(held_out_predictions)
-        self.estimator_fitted = True
-
-    def _fit_feature_vectors(self, X, y):
-        """Fit the model according to the given training data.
-
-        Parameters
-        ----------
-        X : array-like, shape = [n_samples, n_samples]
-            Training vectors, where n_samples is the number of samples
-            and n_features is the number of features.
 
         y : array-like, shape = [n_samples]
             Target vector relative to X. The class with the largest numerical
