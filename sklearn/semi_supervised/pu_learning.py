@@ -94,9 +94,6 @@ class POSOnly(BaseEstimator, ClassifierMixin, MetaEstimatorMixin):
     def __init__(self, estimator, held_out_ratio=0.1, estimator_input_type='feature_vector',
                  random_state=None):
         self.estimator = estimator
-        #TODO
-        # self.c necessary? here? move it to fit?
-        self.c = 1.0
         self.held_out_ratio = held_out_ratio
         if random_state is not None:
             self.random_state = random_state
