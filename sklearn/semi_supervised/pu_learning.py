@@ -294,4 +294,4 @@ class POSOnly(BaseEstimator, ClassifierMixin, MetaEstimatorMixin):
         if not self.estimator_fitted:
             raise Exception("The estimator must be fitted before calling predict(...).")
 
-        return [self.classes_[x] for x in (self.predict_proba(X) > threshold).astype('int')]
+        return np.array([self.classes_[x] for x in (self.predict_proba(X) > threshold).astype('int')])
