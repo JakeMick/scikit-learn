@@ -56,18 +56,20 @@ class POSOnly(BaseEstimator, ClassifierMixin, MetaEstimatorMixin):
 
     Parameters
     ----------
-    estimator
+    estimator : estimator object
         A classifier that implements fit and predict_proba.
 
-    held_out_ratio
-        Fraction of samples to use when computing the platt scaling intercept.
+    held_out_ratio : float, default:0.1
+        Fraction of samples to use when computing the probability that a positive
+        example is labeled.
         1 - held_out_ratio is the number of observations to use when fitting
         the underlying classifier.
 
-    precomputed_kernel
-        descr
+    estimator_input_type : str, default:'feature_vector'
+        Specifies the type of the data used when fitting and predicting with
+        the underlying classifier. It must be 'kernel_matrix' or 'feature_vector'.
 
-    random_state
+    random_state : int or RandomState
         Random seed used for shuffling the data before splitting it.
 
     Adapts any probabilistic binary classifier to Positive Unlabled Learning
@@ -92,7 +94,7 @@ class POSOnly(BaseEstimator, ClassifierMixin, MetaEstimatorMixin):
     # TODO
     # use util funcs to check assumptions
     # e.g. 2darray, sparse arrays...
-    def __init__(self, estimator, held_out_ratio=0.1, precomputed_kernel=False,
+    def __init__(self, estimator, held_out_ratio=0.1, estimator_input_type='feature_vector',
                  random_state=None):
         self.estimator = estimator
         #TODO
@@ -109,7 +111,7 @@ class POSOnly(BaseEstimator, ClassifierMixin, MetaEstimatorMixin):
                             "implement methods fit and predict_proba."
                             "'%s'" % (estimator,))
 
-        if precomputed_kernel:
+        if estimator_input_type == 'kernel_matrix':
             self.fit = self._fit_precomputed_kernel
         else:
             self.fit = self._fit_no_precomputed_kernel
