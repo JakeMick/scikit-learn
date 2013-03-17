@@ -47,13 +47,11 @@ http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.140.9201
 #          Jacob Mick <jam7w2@mail.missouri.edu>
 # Licence: BSD
 
-from ..base import BaseEstimator, ClassifierMixin
+from ..base import BaseEstimator, ClassifierMixin, MetaEstimatorMixin
 import numpy as np
 
 
-#TODO
-# ...do we need ClassifierMixin?
-class POSOnly(BaseEstimator, ClassifierMixin):
+class POSOnly(BaseEstimator, ClassifierMixin, MetaEstimatorMixin):
     """ POSOnly Classifier
 
     Parameters
@@ -88,10 +86,6 @@ class POSOnly(BaseEstimator, ClassifierMixin):
     http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.140.9201
 
     """
-
-    # TODO
-    # Should be be "super"ing the base classifier?
-
     # TODO
     # implement get_params, set_params
 
