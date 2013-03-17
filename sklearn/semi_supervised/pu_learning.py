@@ -106,20 +106,15 @@ class POSOnly(BaseEstimator, ClassifierMixin, MetaEstimatorMixin):
                             "'%s'" % (estimator,))
 
         if estimator_input_type == 'kernel_matrix':
-            self.fit = self._fit_precomputed_kernel
+            self.fit = self._fit_kernel_matrix
         else:
-            self.fit = self._fit_no_precomputed_kernel
+            self.fit = self._fit_feature_vectors
 
         self.estimator_fitted = False
 
-    def _fit_precomputed_kernel(self, X, y):
+    def _fit_kernel_matrix(self, X, y):
         positives = np.where(y == 1)[0]
         held_out_size = np.ceil(positives.shape[0] * self.held_out_ratio)
-
-        # TODO
-        # What kind of error should this raise?
-        if positives.shape[0] <= held_out_size:
-            raise('Not enough positive examples. Try decreaing held_out_size.')
 
         if self.random_state is not None:
             np.random.seed(seed=self.random_state)
@@ -160,7 +155,7 @@ class POSOnly(BaseEstimator, ClassifierMixin, MetaEstimatorMixin):
 
         self.estimator_fitted = True
 
-    def _fit_no_precomputed_kernel(self, X, y):
+    def _fit_feature_vectors(self, X, y):
         """
         Fits an estimator of p(s=1|x) and estimates the value of p(s=1|y=1,x)
 
@@ -174,11 +169,6 @@ class POSOnly(BaseEstimator, ClassifierMixin, MetaEstimatorMixin):
         self.classes_, y = np.unique(y, return_inverse=True)
         positives = np.where(y == 1.)[0]
         held_out_size = np.ceil(positives.shape[0] * self.held_out_ratio)
-
-        #TODO
-        # what kind of error should this raise
-        if positives.shape[0] <= held_out_size:
-            raise("Not enough positive examples to estimate.")
 
         if self.random_state is not None:
             np.random.seed(seed=self.random_state)
