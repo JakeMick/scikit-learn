@@ -89,9 +89,6 @@ class POSOnly(BaseEstimator, ClassifierMixin, MetaEstimatorMixin):
 
     """
     # TODO
-    # implement get_params, set_params
-
-    # TODO
     # use util funcs to check assumptions
     # e.g. 2darray, sparse arrays...
     def __init__(self, estimator, held_out_ratio=0.1, estimator_input_type='feature_vector',
