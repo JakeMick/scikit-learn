@@ -51,7 +51,7 @@ from ..base import BaseEstimator, ClassifierMixin, MetaEstimatorMixin
 import numpy as np
 
 
-class POSOnly(BaseEstimator, ClassifierMixin, MetaEstimatorMixin):
+class POSOnly(BaseEstimator, MetaEstimatorMixin):
     """ POSOnly Classifier
 
     Parameters
